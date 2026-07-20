@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKBC Ambassadors — Scholar Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<style>
+  :root{
+    --ink:#081716;
+    --panel:#0F2B29;
+    --panel-2:#153634;
+    --line:rgba(243,236,217,0.12);
+    --parchment:#F3ECD9;
+    --muted:#9FB8B2;
+    --gold:#D4A017;
+    --ember:#E4572E;
+    --teal:#3FA793;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(212,160,23,0.10), transparent 60%),
+      radial-gradient(900px 600px at 90% 10%, rgba(228,87,46,0.08), transparent 55%),
+      var(--ink);
+    color:var(--parchment);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 16px 80px;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .display{font-family:'Fraunces', serif;}
+
+  header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:30px;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin:0 0 8px;}
+  h1.display{font-size:clamp(26px,4vw,42px);font-weight:600;margin:0;line-height:1.05;color:var(--parchment);}
+  .verse{font-style:italic;color:var(--muted);font-size:13px;margin-top:8px;max-width:520px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media (max-width:760px){.grid2{grid-template-columns:1fr;} .wrap{padding:18px 12px 60px;}}
+
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.02em;}
+  input[type=text], input[type=tel], input[type=email], input[type=password], input[type=date],
+  input[type=datetime-local], input[type=number], textarea, select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--parchment);
+    padding:11px 13px;border-radius:9px;font-family:'Inter';font-size:14px;margin-bottom:16px;
+  }
+  textarea{min-height:70px;resize:vertical;}
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--gold);outline-offset:1px;}
+
+  .swatches{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent;}
+  .swatch.selected{border-color:var(--parchment);transform:scale(1.1);}
+
+  button.btn{background:var(--gold);color:#141a19;border:none;padding:12px 22px;border-radius:9px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Inter';transition:filter .15s;}
+  button.btn:hover{filter:brightness(1.08);}
+  button.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--parchment);}
+  button.btn.ember{background:var(--ember);color:#fff;}
+  button.btn.small{padding:8px 14px;font-size:12px;}
+  button.btn:disabled{opacity:.5;cursor:not-allowed;}
+  button.linklike{background:none;border:none;color:var(--gold);text-decoration:underline;cursor:pointer;font-size:13px;font-family:'Inter';padding:0;}
+
+  .status{font-size:13px;margin:-4px 0 14px;min-height:16px;}
+  .status.err{color:var(--ember);}
+  .status.ok{color:var(--teal);}
+
+  .statRow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+  @media (max-width:760px){.statRow{grid-template-columns:repeat(2,1fr);}}
+  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;}
+  .stat .n{font-family:'Fraunces';font-size:24px;color:var(--gold);}
+  .stat .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;}
+
+  section.block{margin-top:40px;}
+  .blockHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;flex-wrap:wrap;gap:6px;}
+  .blockHead h2{font-family:'Fraunces';font-size:21px;margin:0;}
+  .blockHead .sub{font-size:12px;color:var(--muted);}
+
+  /* Quiz list */
+  .badge{font-size:10px;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;white-space:nowrap;}
+  .badge.upcoming{background:rgba(159,184,178,0.18);color:var(--muted);}
+  .badge.live{background:rgba(228,87,46,0.22);color:var(--ember);}
+  .badge.ended{background:rgba(63,167,147,0.15);color:var(--teal);}
+
+  .quizCard{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px;background:var(--panel-2);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+  .quizCard .qi h3{font-family:'Fraunces';font-size:17px;margin:0 0 6px;}
+  .quizCard .qi .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .quizCard .qa{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+  /* Quiz player (in-app) */
+  .playerOverlay{position:fixed;inset:0;background:rgba(4,12,11,0.94);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .playerCard{background:var(--panel);border:1px solid var(--line);border-radius:18px;max-width:600px;width:100%;padding:26px;max-height:92vh;overflow-y:auto;}
+  .playerProgress{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;}
+  .timerBar{height:6px;background:var(--panel-2);border-radius:999px;overflow:hidden;margin-bottom:22px;}
+  .timerBar .fill{height:100%;background:var(--gold);width:100%;transition:width .2s linear;}
+  .timerBar .fill.low{background:var(--ember);}
+  .qtextPlayer{font-family:'Fraunces';font-size:clamp(19px,3vw,23px);margin:0 0 20px;line-height:1.3;}
+  .optBtn{display:block;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);color:var(--parchment);padding:15px 16px;border-radius:10px;font-size:15px;margin-bottom:10px;cursor:pointer;font-family:'Inter';}
+  .optBtn:hover:not(:disabled){border-color:var(--gold);}
+  .optBtn.correct{background:rgba(63,167,147,0.28);border-color:var(--teal);}
+  .optBtn.wrong{background:rgba(228,87,46,0.28);border-color:var(--ember);}
+  .optBtn:disabled{cursor:default;}
+  .feedbackLine{font-size:13px;color:var(--muted);margin:-4px 0 10px;min-height:18px;}
+  .resultsScreen{text-align:center;padding:10px 0;}
+  .resultsScreen .scoreBig{font-family:'Fraunces';font-size:46px;color:var(--gold);margin:4px 0;}
+  .lbTable{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;}
+  .lbTable th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line);}
+  .lbTable td{padding:8px;border-bottom:1px solid var(--line);}
+  .lbTable tr.me{background:rgba(212,160,23,0.14);}
+  .lbTable td.rk{color:var(--gold);font-family:'IBM Plex Mono';}
+
+  .visualsGrid{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;}
+  @media (max-width:900px){.visualsGrid{grid-template-columns:1fr;}}
+  .canvasCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative;}
+  .canvasCard .cLabel{position:absolute;top:16px;left:20px;z-index:2;}
+  .canvasCard .cLabel .t{font-family:'Fraunces';font-size:15px;}
+  .canvasCard .cLabel .s{font-size:11px;color:var(--muted);}
+  canvas{display:block;width:100%;}
+  #leaderboardCanvas{height:300px;}
+  #lampCanvas{height:300px;}
+  #towerCanvas{height:300px;}
+  .barLabels{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:space-around;z-index:2;pointer-events:none;}
+  .barLabels .bl{text-align:center;font-size:10px;color:var(--parchment);max-width:60px;}
+  .barLabels .bl .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .barLabels .bl .sc{font-family:'IBM Plex Mono';color:var(--gold);}
+  .accNum{position:absolute;bottom:16px;left:0;right:0;text-align:center;z-index:2;}
+  .accNum .big{font-family:'Fraunces';font-size:32px;color:var(--gold);}
+  .accNum .small{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+
+  .connectNotice{max-width:440px;margin:60px auto;text-align:center;}
+
+  .adminList{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:10px;}
+  .adminList .row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px;gap:10px;flex-wrap:wrap;}
+  .adminList .row:last-child{border-bottom:none;}
+  .adminList .row .qt{color:var(--parchment);}
+  .pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:999px;background:var(--panel-2);color:var(--muted);margin-left:6px;}
+
+  .tabRow{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .tabRow button{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .tabRow button.active{background:var(--gold);color:#141a19;border-color:var(--gold);}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:60px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Saint Kingston Bible Club · Ambassadors</p>
+      <h1 class="display">Scholar Dashboard</h1>
+      <p class="verse">"Thy word is a lamp unto my feet, and a light unto my path." — Psalm 119:105</p>
+    </div>
+  </header>
+
+  <div id="authGate"></div>
+  <div id="dashboard" style="display:none;"></div>
+  <div id="playerRoot"></div>
+
+  <footer>SKBC Ambassadors · built for the WhatsApp community · Port Harcourt, Nigeria</footer>
+</div>
+
+<script>
+/* =========================================================================
+   CONFIG — paste your own Supabase project values here before deploying.
+   Project Settings → API → Project URL / anon public key.
+   Full setup steps are in the separate SETUP guide, not shown in this app.
+   ========================================================================= */
+const SUPABASE_URL = "https://mfbmexoaicrehvgtmzhv.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mYm1leG9haWNyZWh2Z3Rtemh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NzU4MjgsImV4cCI6MjEwMDE1MTgyOH0.N8vNfKFtzUrNOptEFh8RQ4t3Q-crXgylL_nS3genl9Y";
+
+const PALETTE = ["#D4A017","#E4572E","#3FA793","#7C6FE0","#E0A8C4","#6FA8DC"];
+const CONFIGURED = !SUPABASE_URL.includes("YOUR_SUPABASE") && !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
+
+let supa = null;
+let currentSession = null;
+let currentProfile = null;
+let isAdminUser = false;
+let realtimeChannel = null;
+let pollTimer = null;
+let visuals = null;
+let authMode = "scholar";
+
+function boot(){
+  if (!CONFIGURED){
+    document.getElementById("authGate").innerHTML = `
+      <div class="card connectNotice">
+        <p class="display" style="font-size:20px;margin:0 0 8px;">Dashboard unavailable</p>
+        <p style="color:var(--muted);font-size:14px;">This dashboard isn't connected yet. Please contact the coordinator.</p>
+      </div>`;
+    return;
+  }
+  supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  supa.auth.getSession().then(({data})=>{
+    currentSession = data.session;
+    afterSessionResolved();
+  });
+  supa.auth.onAuthStateChange((_event, session)=>{ currentSession = session; });
+}
+
+async function afterSessionResolved(){
+  if (!currentSession){ renderAuthGate(); return; }
+  const user = currentSession.user;
+  if (user.is_anonymous){
+    isAdminUser = false;
+    const {data: profile} = await supa.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    if (!profile){ renderAuthGate(); return; }
+    currentProfile = profile;
+    renderDashboard();
+  } else {
+    const {data: adminRow} = await supa.from("admins").select("*").eq("id", user.id).maybeSingle();
+    if (!adminRow){
+      await supa.auth.signOut();
+      currentSession = null;
+      renderAuthGate("This account is not registered as an SKBC admin.");
+      return;
+    }
+    isAdminUser = true;
+    renderDashboard();
+  }
+}
+
+/* ========================= AUTH GATE (logged out) ====================== */
+
+function renderAuthGate(errMsg){
+  document.getElementById("dashboard").style.display = "none";
+  const gate = document.getElementById("authGate");
+  gate.style.display = "block";
+
+  if (authMode === "scholar"){
+    gate.innerHTML = `
+      <div class="card" style="max-width:460px;">
+        <p class="eyebrow">Join the club</p>
+        <h2 class="display" style="margin:0 0 4px;font-size:22px;">Create your scholar profile</h2>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 20px;">One-time setup. Use the same device next time and you'll be recognized automatically.</p>
+        <div id="scholarStatus" class="status"></div>
+        <label>Full name</label>
+        <input type="text" id="inpName" placeholder="e.g. Amaka Johnson" autocomplete="name">
+        <label>WhatsApp number</label>
+        <input type="tel" id="inpPhone" placeholder="e.g. 08012345678" autocomplete="tel">
+        <label>Pick a colour</label>
+        <div class="swatches" id="swatches"></div>
+        <button class="btn" id="btnCreateProfile" style="width:100%;">Join the dashboard</button>
+        <p style="margin-top:18px;font-size:13px;color:var(--muted);">Coordinator?
+          <button class="linklike" id="linkToAdmin">Sign in as admin</button>
+        </p>
+      </div>`;
+    const sw = document.getElementById("swatches");
+    let chosen = PALETTE[0];
+    PALETTE.forEach((c,i)=>{
+      const d = document.createElement("div");
+      d.className = "swatch" + (i===0?" selected":"");
+      d.style.background = c;
+      d.onclick = ()=>{ chosen = c; [...sw.children].forEach(x=>x.classList.remove("selected")); d.classList.add("selected"); };
+      sw.appendChild(d);
+    });
+    document.getElementById("linkToAdmin").onclick = ()=>{ authMode="admin"; renderAuthGate(); };
+    document.getElementById("btnCreateProfile").onclick = ()=>createScholarProfile(chosen);
+    if (errMsg) setStatus("scholarStatus", errMsg, "err");
+  } else {
+    gate.innerHTML = `
+      <div class="card" style="max-width:420px;">
+        <p class="eyebrow">Coordinator access</p>
+        <h2 class="display" style="margin:0 0 4px;font-size:22px;">Admin sign in</h2>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 20px;">Use the email/password set up in Supabase Auth.</p>
+        <div id="adminStatus" class="status"></div>
+        <label>Email</label>
+        <input type="email" id="inpAdminEmail" autocomplete="email">
+        <label>Password</label>
+        <input type="password" id="inpAdminPassword" autocomplete="current-password">
+        <button class="btn ember" id="btnAdminLogin" style="width:100%;">Sign in</button>
+        <p style="margin-top:18px;font-size:13px;color:var(--muted);">
+          <button class="linklike" id="linkToScholar">Back to scholar sign up</button>
+        </p>
+      </div>`;
+    document.getElementById("linkToScholar").onclick = ()=>{ authMode="scholar"; renderAuthGate(); };
+    document.getElementById("btnAdminLogin").onclick = adminLogin;
+    if (errMsg) setStatus("adminStatus", errMsg, "err");
+  }
+}
+
+function setStatus(id, msg, cls){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg || "";
+  el.className = "status" + (cls?(" "+cls):"");
+}
+
+async function createScholarProfile(color){
+  const name = document.getElementById("inpName").value.trim();
+  const phone = document.getElementById("inpPhone").value.trim();
+  if (!name || !phone){ setStatus("scholarStatus","Please enter your name and WhatsApp number.","err"); return; }
+  const btn = document.getElementById("btnCreateProfile");
+  btn.disabled = true;
+  setStatus("scholarStatus","Setting up your profile…");
+  try{
+    const {data: signInData, error: signInErr} = await supa.auth.signInAnonymously();
+    if (signInErr) throw signInErr;
+    const uid = signInData.user.id;
+    const {error: insertErr} = await supa.from("profiles").insert({
+      id: uid, whatsapp_number: phone, full_name: name, avatar_color: color
+    });
+    if (insertErr){
+      if (insertErr.code === "23505"){
+        setStatus("scholarStatus","That WhatsApp number is already registered. Sign in from your original device, or ask the coordinator for help.","err");
+      } else {
+        setStatus("scholarStatus", insertErr.message, "err");
+      }
+      btn.disabled = false;
+      return;
+    }
+    currentSession = signInData.session;
+    const {data: profile} = await supa.from("profiles").select("*").eq("id", uid).maybeSingle();
+    currentProfile = profile;
+    isAdminUser = false;
+    renderDashboard();
+  } catch(e){
+    setStatus("scholarStatus", e.message || "Something went wrong. If sign-up is disabled, ask the coordinator to check the setup.", "err");
+    btn.disabled = false;
+  }
+}
+
+async function adminLogin(){
+  const email = document.getElementById("inpAdminEmail").value.trim();
+  const password = document.getElementById("inpAdminPassword").value;
+  if (!email || !password){ setStatus("adminStatus","Enter your email and password.","err"); return; }
+  const btn = document.getElementById("btnAdminLogin");
+  btn.disabled = true;
+  setStatus("adminStatus","Signing in…");
+  const {data, error} = await supa.auth.signInWithPassword({email, password});
+  if (error){ setStatus("adminStatus", error.message, "err"); btn.disabled = false; return; }
+  currentSession = data.session;
+  const {data: adminRow} = await supa.from("admins").select("*").eq("id", data.user.id).maybeSingle();
+  if (!adminRow){
+    await supa.auth.signOut();
+    setStatus("adminStatus","This account is not registered as an SKBC admin.","err");
+    btn.disabled = false;
+    return;
+  }
+  isAdminUser = true;
+  renderDashboard();
+}
+
+async function logout(){
+  if (realtimeChannel) supa.removeChannel(realtimeChannel);
+  if (pollTimer) clearInterval(pollTimer);
+  await supa.auth.signOut();
+  currentSession = null; currentProfile = null; isAdminUser = false;
+  authMode = "scholar";
+  document.getElementById("dashboard").innerHTML = "";
+  renderAuthGate();
+}
+
+/* ============================ DASHBOARD SHELL =========================== */
+
+function renderDashboard(){
+  document.getElementById("authGate").style.display = "none";
+  const dash = document.getElementById("dashboard");
+  dash.style.display = "block";
+
+  dash.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+      <button class="btn ghost" id="btnLogout">Log out</button>
+    </div>
+    <div id="panel"></div>
+
+    <section class="block">
+      <div class="blockHead">
+        <div>
+          <h2 class="display">Live pulse</h2>
+          <div class="sub">Updates in real time as scholars take today's quizzes.</div>
+        </div>
+      </div>
+      <div class="visualsGrid">
+        <div class="canvasCard" style="grid-row: span 2;">
+          <div class="cLabel"><div class="t">Leaderboard</div><div class="s">Top scholars overall</div></div>
+          <canvas id="leaderboardCanvas"></canvas>
+          <div class="barLabels" id="barLabels"></div>
+        </div>
+        <div class="canvasCard">
+          <div class="cLabel"><div class="t">The Lamp</div><div class="s">Psalm 119:105 — brighter with more scholars active today</div></div>
+          <canvas id="lampCanvas"></canvas>
+        </div>
+        <div class="canvasCard">
+          <div class="cLabel"><div class="t">Today's accuracy</div><div class="s">Correct vs. attempted</div></div>
+          <canvas id="towerCanvas"></canvas>
+          <div class="accNum" id="accNum"><div class="big mono">—</div><div class="small">no attempts yet today</div></div>
+        </div>
+      </div>
+      <div class="statRow" style="margin-top:20px;" id="dailyStatRow"></div>
+    </section>
+  `;
+  document.getElementById("btnLogout").onclick = logout;
+
+  if (isAdminUser) renderAdminPanel(); else renderScholarPanel();
+
+  initVisuals();
+  refreshLiveVisuals();
+  subscribeRealtime();
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refreshLiveVisuals, 15000);
+}
+
+/* ============================ SCHOLAR PANEL ============================= */
+
+async function renderScholarPanel(){
+  const panel = document.getElementById("panel");
+  panel.innerHTML = `
+    <p class="eyebrow">Welcome back</p>
+    <h2 class="display" style="margin:0 0 20px;font-size:26px;">${escapeHtml(currentProfile.full_name)}</h2>
+    <div class="statRow" id="myStats"></div>
+    <div class="blockHead"><h2 class="display" style="font-size:20px;">Quizzes</h2></div>
+    <div id="quizList"><p style="color:var(--muted);font-size:13px;">Loading…</p></div>
+  `;
+  renderMyStats();
+  loadQuizList();
+}
+
+function renderMyStats(){
+  const el = document.getElementById("myStats");
+  if (!el) return;
+  const p = currentProfile;
+  el.innerHTML = `
+    <div class="stat"><div class="n mono">${p.total_score}</div><div class="l">Total score</div></div>
+    <div class="stat"><div class="n mono">${p.total_correct}/${p.total_attempts}</div><div class="l">Correct / attempted</div></div>
+    <div class="stat"><div class="n mono">${p.current_streak}</div><div class="l">Current streak</div></div>
+    <div class="stat"><div class="n mono">${p.best_streak}</div><div class="l">Best streak</div></div>
+  `;
+}
+
+function formatDT(iso){
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+}
+
+async function loadQuizList(){
+  const container = document.getElementById("quizList");
+  const {data: quizzes, error} = await supa.from("quizzes_public").select("*");
+  if (error){ container.innerHTML = `<p class="status err">${escapeHtml(error.message)}</p>`; return; }
+  if (!quizzes || quizzes.length === 0){
+    container.innerHTML = `<p style="color:var(--muted);font-size:13px;">No quiz has been scheduled yet. Check back soon.</p>`;
+    return;
+  }
+  const {data: myAttempts} = await supa.from("quiz_attempts").select("quiz_id,finished_at,total_score,total_correct").eq("profile_id", currentProfile.id);
+  const attemptMap = {};
+  (myAttempts||[]).forEach(a=>{ attemptMap[a.quiz_id] = a; });
+
+  container.innerHTML = "";
+  quizzes.forEach(q=>{
+    const att = attemptMap[q.id];
+    const card = document.createElement("div");
+    card.className = "quizCard";
+    let actionHtml = "";
+    if (q.status === "upcoming"){
+      actionHtml = `<span class="badge upcoming">Upcoming</span>`;
+    } else if (q.status === "live"){
+      if (att && att.finished_at){
+        actionHtml = `<span class="badge ended">Completed</span><button class="btn small ghost" data-lb="${q.id}">Leaderboard</button>`;
+      } else if (att){
+        actionHtml = `<span class="badge live">Live</span><button class="btn small" data-play="${q.id}">Resume quiz</button>`;
+      } else {
+        actionHtml = `<span class="badge live">Live</span><button class="btn small" data-play="${q.id}">Start quiz</button>`;
+      }
+    } else {
+      actionHtml = `<span class="badge ended">Ended</span><button class="btn small ghost" data-lb="${q.id}">Leaderboard</button>`;
+    }
+    card.innerHTML = `
+      <div class="qi">
+        <h3>${escapeHtml(q.title)}</h3>
+        <div class="meta">
+          ${q.book_reference ? `<span>${escapeHtml(q.book_reference)}</span> · ` : ""}
+          <span>${formatDT(q.scheduled_start)}</span> ·
+          <span>${q.question_count} question${q.question_count===1?"":"s"}</span> ·
+          <span>${q.per_question_seconds}s each</span> ·
+          <span>${q.points_per_question} pts/question</span>
+        </div>
+      </div>
+      <div class="qa">${actionHtml}</div>
+    `;
+    container.appendChild(card);
+    const playBtn = card.querySelector("[data-play]");
+    if (playBtn) playBtn.onclick = ()=>openQuizPlayer(q.id, q.title);
+    const lbBtn = card.querySelector("[data-lb]");
+    if (lbBtn) lbBtn.onclick = ()=>openLeaderboardOnly(q.id, q.title);
+  });
+}
+
+/* ============================== ADMIN PANEL ============================= */
+
+function renderAdminPanel(){
+  const panel = document.getElementById("panel");
+  panel.innerHTML = `
+    <p class="eyebrow">Coordinator</p>
+    <h2 class="display" style="margin:0 0 20px;font-size:26px;">Schedule a quiz</h2>
+    <div class="card" style="max-width:640px;margin-bottom:30px;">
+      <div id="quizFormStatus" class="status"></div>
+      <label>Quiz title</label>
+      <input type="text" id="quizTitle" placeholder="e.g. Psalms Week 1 Quiz">
+      <div class="grid2">
+        <div><label>Book / reference (optional)</label><input type="text" id="quizRef" placeholder="e.g. Psalm 1, 8"></div>
+        <div><label>Scheduled start</label><input type="datetime-local" id="quizStart"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Seconds per question</label><input type="number" id="quizPerQ" value="30" min="5"></div>
+        <div><label>Points per question</label><input type="number" id="quizPoints" value="10" min="0"></div>
+      </div>
+      <button class="btn" id="btnCreateQuiz">Create quiz</button>
+    </div>
+
+    <div class="blockHead"><h2 class="display" style="font-size:20px;">Manage quizzes</h2></div>
+    <div id="adminQuizList"><p style="color:var(--muted);font-size:13px;">Loading…</p></div>
+
+    <div id="questionManager" style="margin-top:24px;"></div>
+  `;
+  document.getElementById("btnCreateQuiz").onclick = createQuiz;
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById("quizStart").value = now.toISOString().slice(0,16);
+  loadAdminQuizList();
+}
+
+async function createQuiz(){
+  const title = document.getElementById("quizTitle").value.trim();
+  const bookRef = document.getElementById("quizRef").value.trim() || null;
+  const startLocal = document.getElementById("quizStart").value;
+  const perQ = parseInt(document.getElementById("quizPerQ").value || "30", 10);
+  const pts = parseInt(document.getElementById("quizPoints").value || "10", 10);
+  if (!title || !startLocal){ setStatus("quizFormStatus","Enter a title and a scheduled start time.","err"); return; }
+  setStatus("quizFormStatus","Creating…");
+  const {error} = await supa.from("quizzes").insert({
+    title, book_reference: bookRef,
+    scheduled_start: new Date(startLocal).toISOString(),
+    per_question_seconds: perQ, points_per_question: pts,
+    created_by: currentSession.user.id
+  });
+  if (error){ setStatus("quizFormStatus", error.message, "err"); return; }
+  setStatus("quizFormStatus","Quiz created. Now add its questions below.","ok");
+  document.getElementById("quizTitle").value = "";
+  document.getElementById("quizRef").value = "";
+  loadAdminQuizList();
+}
+
+async function loadAdminQuizList(){
+  const el = document.getElementById("adminQuizList");
+  const {data, error} = await supa.from("quizzes_public").select("*");
+  if (error){ el.innerHTML = `<p class="status err">${escapeHtml(error.message)}</p>`; return; }
+  if (!data || data.length === 0){ el.innerHTML = `<p style="color:var(--muted);font-size:13px;">No quizzes yet.</p>`; return; }
+  el.innerHTML = "";
+  data.forEach(q=>{
+    const card = document.createElement("div");
+    card.className = "quizCard";
+    card.innerHTML = `
+      <div class="qi">
+        <h3>${escapeHtml(q.title)}</h3>
+        <div class="meta">
+          <span class="badge ${q.status}">${q.status}</span>
+          ${q.book_reference ? `<span>${escapeHtml(q.book_reference)}</span> · ` : ""}
+          <span>${formatDT(q.scheduled_start)}</span> ·
+          <span>${q.question_count} question${q.question_count===1?"":"s"}</span> ·
+          <span>${q.per_question_seconds}s · ${q.points_per_question}pts</span>
+        </div>
+      </div>
+      <div class="qa">
+        <button class="btn small ghost" data-manage="${q.id}" data-title="${escapeAttr(q.title)}">Manage questions</button>
+        <button class="btn small ghost" data-lb="${q.id}" data-title2="${escapeAttr(q.title)}">Leaderboard</button>
+        <button class="btn small ember" data-delquiz="${q.id}">Delete</button>
+      </div>
+    `;
+    el.appendChild(card);
+    card.querySelector("[data-manage]").onclick = ()=>renderQuestionManager(q.id, q.title);
+    card.querySelector("[data-lb]").onclick = ()=>openLeaderboardOnly(q.id, q.title);
+    card.querySelector("[data-delquiz]").onclick = async ()=>{
+      if (!confirm(`Delete "${q.title}" and all its questions/attempts?`)) return;
+      await supa.from("quizzes").delete().eq("id", q.id);
+      loadAdminQuizList();
+      document.getElementById("questionManager").innerHTML = "";
+    };
+  });
+}
+
+async function renderQuestionManager(quizId, quizTitle){
+  const el = document.getElementById("questionManager");
+  el.innerHTML = `
+    <div class="blockHead"><h2 class="display" style="font-size:20px;">Questions — ${escapeHtml(quizTitle)}</h2></div>
+    <div class="card" style="max-width:640px;margin-bottom:20px;">
+      <div id="qFormStatus" class="status"></div>
+      <label>Question</label>
+      <textarea id="qText" placeholder="e.g. In Psalm 23, what does the shepherd provide in green pastures?"></textarea>
+      <div class="grid2">
+        <div><label>Option A</label><input type="text" id="optA"></div>
+        <div><label>Option B</label><input type="text" id="optB"></div>
+        <div><label>Option C</label><input type="text" id="optC"></div>
+        <div><label>Option D</label><input type="text" id="optD"></div>
+      </div>
+      <label>Correct option</label>
+      <select id="correctOpt"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+      <label>Explanation shown after answering (optional)</label>
+      <textarea id="qExpl"></textarea>
+      <button class="btn" id="btnAddQuestion">Add question</button>
+    </div>
+    <div class="adminList" id="qList"><div class="row"><span class="qt">Loading…</span></div></div>
+  `;
+  document.getElementById("btnAddQuestion").onclick = ()=>addQuizQuestion(quizId);
+  loadQuizQuestions(quizId);
+}
+
+async function addQuizQuestion(quizId){
+  const payload = {
+    quiz_id: quizId,
+    question_text: document.getElementById("qText").value.trim(),
+    option_a: document.getElementById("optA").value.trim(),
+    option_b: document.getElementById("optB").value.trim(),
+    option_c: document.getElementById("optC").value.trim(),
+    option_d: document.getElementById("optD").value.trim(),
+    correct_option: document.getElementById("correctOpt").value,
+    explanation: document.getElementById("qExpl").value.trim() || null,
+  };
+  if (!payload.question_text || !payload.option_a || !payload.option_b || !payload.option_c || !payload.option_d){
+    setStatus("qFormStatus","Fill in the question and all four options.","err"); return;
+  }
+  setStatus("qFormStatus","Adding…");
+  const {error} = await supa.from("quiz_questions").insert(payload);
+  if (error){ setStatus("qFormStatus", error.message, "err"); return; }
+  setStatus("qFormStatus","Added.","ok");
+  ["qText","optA","optB","optC","optD","qExpl"].forEach(id=>document.getElementById(id).value="");
+  loadQuizQuestions(quizId);
+  loadAdminQuizList();
+}
+
+async function loadQuizQuestions(quizId){
+  const el = document.getElementById("qList");
+  const {data, error} = await supa.from("quiz_questions").select("*").eq("quiz_id", quizId).order("created_at",{ascending:true});
+  if (error){ el.innerHTML = `<div class="row"><span class="qt status err">${escapeHtml(error.message)}</span></div>`; return; }
+  if (!data || data.length === 0){ el.innerHTML = `<div class="row"><span class="qt" style="color:var(--muted);">No questions added yet.</span></div>`; return; }
+  el.innerHTML = data.map(q=>`
+    <div class="row">
+      <span class="qt">${escapeHtml(q.question_text)} <span class="pill">correct: ${q.correct_option}</span></span>
+      <button class="linklike" data-delq="${q.id}">delete</button>
+    </div>`).join("");
+  el.querySelectorAll("[data-delq]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      if (!confirm("Delete this question?")) return;
+      await supa.from("quiz_questions").delete().eq("id", btn.getAttribute("data-delq"));
+      loadQuizQuestions(quizId);
+      loadAdminQuizList();
+    };
+  });
+}
+
+/* ============================ QUIZ PLAYER (in-app) ======================= */
+
+let playerState = null; // {attemptId, quizId, quizTitle, timerHandle}
+
+async function openQuizPlayer(quizId, quizTitle){
+  const root = document.getElementById("playerRoot");
+  root.innerHTML = `
+    <div class="playerOverlay" id="overlay">
+      <div class="playerCard" id="playerCard">
+        <p style="color:var(--muted);font-size:13px;">Starting "${escapeHtml(quizTitle)}"…</p>
+      </div>
+    </div>`;
+  const {data: attempt, error} = await supa.rpc("start_quiz_attempt", {p_quiz_id: quizId});
+  if (error){
+    document.getElementById("playerCard").innerHTML = `
+      <p class="status err">${escapeHtml(error.message)}</p>
+      <button class="btn ghost" id="closePlayer">Close</button>`;
+    document.getElementById("closePlayer").onclick = closeQuizPlayer;
+    return;
+  }
+  playerState = {attemptId: attempt.id, quizId, quizTitle, timerHandle: null};
+  loadCurrentQuestion();
+}
+
+function closeQuizPlayer(refresh){
+  if (playerState && playerState.timerHandle) clearInterval(playerState.timerHandle);
+  playerState = null;
+  document.getElementById("playerRoot").innerHTML = "";
+  if (refresh){
+    loadQuizList();
+    supa.from("profiles").select("*").eq("id", currentProfile.id).maybeSingle().then(({data})=>{
+      if (data){ currentProfile = data; renderMyStats(); }
+    });
+  }
+}
+
+async function loadCurrentQuestion(){
+  if (!playerState) return;
+  if (playerState.timerHandle) clearInterval(playerState.timerHandle);
+  const {data, error} = await supa.rpc("get_current_question", {p_attempt_id: playerState.attemptId});
+  if (error){
+    document.getElementById("playerCard").innerHTML = `<p class="status err">${escapeHtml(error.message)}</p><button class="btn ghost" id="closePlayer">Close</button>`;
+    document.getElementById("closePlayer").onclick = ()=>closeQuizPlayer(true);
+    return;
+  }
+  const q = data[0];
+  if (!q || q.finished){
+    showQuizResults();
+    return;
+  }
+  renderQuestionCard(q);
+}
+
+function renderQuestionCard(q){
+  const card = document.getElementById("playerCard");
+  const options = [["A",q.option_a],["B",q.option_b],["C",q.option_c],["D",q.option_d]];
+  card.innerHTML = `
+    <div class="playerProgress">
+      <span>${escapeHtml(playerState.quizTitle)}</span>
+      <span class="mono">Question ${q.q_index + 1} of ${q.q_total} · ${q.points} pts</span>
+    </div>
+    <div class="timerBar"><div class="fill" id="timerFill"></div></div>
+    <p class="qtextPlayer">${escapeHtml(q.question_text)}</p>
+    <div id="optWrap">
+      ${options.map(([letter,val])=>`<button class="optBtn" data-opt="${letter}">${letter}. ${escapeHtml(val)}</button>`).join("")}
+    </div>
+    <div class="feedbackLine" id="feedbackLine"></div>
+  `;
+  const deadline = new Date(q.deadline).getTime();
+  // Scale the bar against the time remaining when this question first loads,
+  // so it always drains smoothly to empty regardless of per-question length.
+  const fullWindowMs = Math.max(1000, deadline - Date.now());
+  document.querySelectorAll("#optWrap [data-opt]").forEach(btn=>{
+    btn.onclick = ()=>answerQuestion(q.question_id, btn.getAttribute("data-opt"));
+  });
+  const fill = document.getElementById("timerFill");
+  playerState.timerHandle = setInterval(()=>{
+    const remainMs = deadline - Date.now();
+    const pct = Math.max(0, Math.min(100, (remainMs / fullWindowMs) * 100));
+    fill.style.width = pct + "%";
+    if (pct < 25) fill.classList.add("low"); else fill.classList.remove("low");
+    if (remainMs <= 0){
+      clearInterval(playerState.timerHandle);
+      document.querySelectorAll("#optWrap [data-opt]").forEach(b=>b.disabled = true);
+      document.getElementById("feedbackLine").textContent = "Time's up — moving to the next question…";
+      setTimeout(loadCurrentQuestion, 1200);
+    }
+  }, 150);
+}
+
+async function answerQuestion(questionId, letter){
+  if (!playerState) return;
+  clearInterval(playerState.timerHandle);
+  document.querySelectorAll("#optWrap [data-opt]").forEach(b=>b.disabled = true);
+  const {data, error} = await supa.rpc("submit_quiz_answer", {p_attempt_id: playerState.attemptId, p_selected_option: letter});
+  if (error){
+    document.getElementById("feedbackLine").textContent = error.message;
+    setTimeout(loadCurrentQuestion, 1400);
+    return;
+  }
+  const r = data[0];
+  document.querySelectorAll("#optWrap [data-opt]").forEach(btn=>{
+    const opt = btn.getAttribute("data-opt");
+    if (opt === r.correct_option) btn.classList.add("correct");
+    else if (opt === letter) btn.classList.add("wrong");
+  });
+  document.getElementById("feedbackLine").innerHTML = r.is_correct
+    ? `✓ Correct — +${r.points_awarded} pts`
+    : `✗ Not quite. Correct answer: ${r.correct_option}${r.explanation ? " — " + escapeHtml(r.explanation) : ""}`;
+  setTimeout(loadCurrentQuestion, 1800);
+}
+
+async function showQuizResults(){
+  const {data: attemptRows} = await supa.from("quiz_attempts").select("total_score,total_correct,question_order").eq("id", playerState.attemptId).maybeSingle();
+  const total = attemptRows ? (attemptRows.question_order || []).length : 0;
+  const {data: lb} = await supa.rpc("get_quiz_leaderboard", {p_quiz_id: playerState.quizId});
+  const card = document.getElementById("playerCard");
+  card.innerHTML = `
+    <div class="resultsScreen">
+      <p class="eyebrow" style="justify-content:center;display:flex;">${escapeHtml(playerState.quizTitle)}</p>
+      <p class="display" style="font-size:20px;margin:0;">Quiz complete</p>
+      <div class="scoreBig mono">${attemptRows ? attemptRows.total_score : 0}</div>
+      <p style="color:var(--muted);font-size:13px;">${attemptRows ? attemptRows.total_correct : 0} of ${total} correct</p>
+      <table class="lbTable">
+        <thead><tr><th>#</th><th>Scholar</th><th>Score</th><th>Correct</th></tr></thead>
+        <tbody>
+          ${(lb||[]).slice(0,15).map(r=>`
+            <tr class="${r.full_name === currentProfile.full_name ? 'me' : ''}">
+              <td class="rk mono">${r.rnk}</td>
+              <td>${escapeHtml(r.full_name)}</td>
+              <td class="mono">${r.total_score}</td>
+              <td class="mono">${r.total_correct}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+      <button class="btn" id="closePlayer" style="margin-top:20px;">Back to dashboard</button>
+    </div>`;
+  document.getElementById("closePlayer").onclick = ()=>closeQuizPlayer(true);
+}
+
+async function openLeaderboardOnly(quizId, quizTitle){
+  const root = document.getElementById("playerRoot");
+  root.innerHTML = `<div class="playerOverlay"><div class="playerCard" id="lbCard"><p style="color:var(--muted);font-size:13px;">Loading leaderboard…</p></div></div>`;
+  const {data: lb, error} = await supa.rpc("get_quiz_leaderboard", {p_quiz_id: quizId});
+  const card = document.getElementById("lbCard");
+  if (error){ card.innerHTML = `<p class="status err">${escapeHtml(error.message)}</p><button class="btn ghost" id="closeLb">Close</button>`; document.getElementById("closeLb").onclick = ()=>{document.getElementById("playerRoot").innerHTML="";}; return; }
+  card.innerHTML = `
+    <p class="eyebrow">${escapeHtml(quizTitle)}</p>
+    <p class="display" style="font-size:20px;margin:0 0 12px;">Leaderboard</p>
+    <table class="lbTable">
+      <thead><tr><th>#</th><th>Scholar</th><th>Score</th><th>Correct</th></tr></thead>
+      <tbody>
+        ${(lb||[]).length ? lb.map(r=>`
+          <tr class="${currentProfile && r.full_name === currentProfile.full_name ? 'me':''}">
+            <td class="rk mono">${r.rnk}</td><td>${escapeHtml(r.full_name)}</td>
+            <td class="mono">${r.total_score}</td><td class="mono">${r.total_correct}</td>
+          </tr>`).join("") : `<tr><td colspan="4" style="color:var(--muted);">No attempts yet.</td></tr>`}
+      </tbody>
+    </table>
+    <button class="btn ghost" id="closeLb" style="margin-top:18px;">Close</button>
+  `;
+  document.getElementById("closeLb").onclick = ()=>{document.getElementById("playerRoot").innerHTML="";};
+}
+
+/* ============================ LIVE VISUALS (3D) ========================== */
+
+function initVisuals(){
+  visuals = {
+    leaderboard: initLeaderboardScene(document.getElementById("leaderboardCanvas")),
+    lamp: initLampScene(document.getElementById("lampCanvas")),
+    tower: initTowerScene(document.getElementById("towerCanvas")),
+  };
+  animateVisuals();
+}
+
+function animateVisuals(){
+  requestAnimationFrame(animateVisuals);
+  const t = performance.now() / 1000;
+  if (visuals){
+    tickLeaderboard(visuals.leaderboard, t);
+    tickLamp(visuals.lamp, t);
+    tickTower(visuals.tower, t);
+  }
+}
+
+function makeRenderer(canvas){
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  function resize(){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    renderer.setSize(w, h, false);
+    return {w,h};
+  }
+  resize();
+  window.addEventListener("resize", resize);
+  return {renderer, resize};
+}
+
+function initLeaderboardScene(canvas){
+  const {renderer, resize} = makeRenderer(canvas);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, canvas.clientWidth/canvas.clientHeight, 0.1, 100);
+  camera.position.set(0, 5.5, 11);
+  camera.lookAt(0, 1.5, 0);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const dir = new THREE.DirectionalLight(0xffe9c2, 1.0);
+  dir.position.set(5, 10, 6);
+  scene.add(dir);
+
+  const group = new THREE.Group();
+  scene.add(group);
+  const bars = [];
+  const N = 10;
+  const spacing = 1.15;
+  for (let i=0;i<N;i++){
+    const geo = new THREE.BoxGeometry(0.7, 1, 0.7);
+    const mat = new THREE.MeshStandardMaterial({color: 0xD4A017, roughness:0.5, metalness:0.15});
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.x = (i - (N-1)/2) * spacing;
+    mesh.scale.y = 0.01;
+    mesh.position.y = 0.005;
+    group.add(mesh);
+    bars.push({mesh, target:0.01, current:0.01});
+  }
+  const floorGeo = new THREE.PlaneGeometry(20, 6);
+  const floorMat = new THREE.MeshStandardMaterial({color:0x0B231F, roughness:1});
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI/2;
+  scene.add(floor);
+
+  return {renderer, resize, scene, camera, bars, canvas};
+}
+
+function tickLeaderboard(vis, t){
+  vis.bars.forEach(b=>{
+    b.current += (b.target - b.current) * 0.08;
+    const h = Math.max(0.01, b.current);
+    b.mesh.scale.y = h;
+    b.mesh.position.y = h/2;
+  });
+  vis.scene.rotation.y = Math.sin(t*0.15)*0.12;
+  vis.resize();
+  vis.renderer.render(vis.scene, vis.camera);
+}
+
+function updateLeaderboardData(vis, rows){
+  const maxScore = Math.max(1, ...rows.map(r=>r.total_score));
+  const labelsEl = document.getElementById("barLabels");
+  if (!labelsEl) return;
+  labelsEl.innerHTML = "";
+  vis.bars.forEach((bar, i)=>{
+    const r = rows[i];
+    if (r){
+      bar.target = 0.3 + (r.total_score / maxScore) * 3.6;
+      bar.mesh.material.color.set(r.avatar_color || "#D4A017");
+      bar.mesh.visible = true;
+      const div = document.createElement("div");
+      div.className = "bl";
+      div.innerHTML = `<div class="nm">${escapeHtml(firstNameOnly(r.full_name))}</div><div class="sc mono">${r.total_score}</div>`;
+      labelsEl.appendChild(div);
+    } else {
+      bar.target = 0.01;
+      bar.mesh.visible = false;
+      labelsEl.appendChild(document.createElement("div"));
+    }
+  });
+}
+
+function firstNameOnly(n){ return n ? n.split(" ")[0] : "—"; }
+
+function initLampScene(canvas){
+  const {renderer, resize} = makeRenderer(canvas);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, canvas.clientWidth/canvas.clientHeight, 0.1, 100);
+  camera.position.set(0, 1.6, 5.2);
+  camera.lookAt(0, 1.1, 0);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+
+  const baseMat = new THREE.MeshStandardMaterial({color:0x153634, metalness:0.4, roughness:0.5});
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 0.25, 24), baseMat);
+  base.position.y = 0.1;
+  scene.add(base);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.35, 1.3, 20), baseMat);
+  neck.position.y = 0.85;
+  scene.add(neck);
+  const bowlMat = new THREE.MeshStandardMaterial({color:0x3FA793, transparent:true, opacity:0.35, metalness:0.1, roughness:0.2});
+  const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 24, 0, Math.PI*2, 0, Math.PI*0.55), bowlMat);
+  bowl.position.y = 1.55;
+  scene.add(bowl);
+
+  const flameGeo = new THREE.SphereGeometry(0.28, 16, 16);
+  const flameMat = new THREE.MeshBasicMaterial({color:0xE4572E});
+  const flame = new THREE.Mesh(flameGeo, flameMat);
+  flame.position.y = 1.65;
+  scene.add(flame);
+
+  const light = new THREE.PointLight(0xE4572E, 1.4, 6, 2);
+  light.position.set(0, 1.7, 0.3);
+  scene.add(light);
+
+  return {renderer, resize, scene, camera, flame, light, bowl, intensity:0.3};
+}
+
+function tickLamp(vis, t){
+  const flick = 1 + Math.sin(t*9)*0.05 + Math.sin(t*17)*0.03;
+  const scale = 0.6 + vis.intensity * 1.1;
+  vis.flame.scale.setScalar(scale * flick);
+  vis.light.intensity = (0.6 + vis.intensity * 2.4) * flick;
+  const warm = new THREE.Color().setHSL(0.06, 0.85, 0.45 + vis.intensity*0.15);
+  vis.flame.material.color.copy(warm);
+  vis.light.color.copy(warm);
+  vis.scene.rotation.y = Math.sin(t*0.2)*0.25;
+  vis.resize();
+  vis.renderer.render(vis.scene, vis.camera);
+}
+
+function initTowerScene(canvas){
+  const {renderer, resize} = makeRenderer(canvas);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, canvas.clientWidth/canvas.clientHeight, 0.1, 100);
+  camera.position.set(0, 1.4, 5);
+  camera.lookAt(0, 1.1, 0);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+  dir.position.set(3,5,4);
+  scene.add(dir);
+
+  const glassMat = new THREE.MeshStandardMaterial({color:0x9FB8B2, transparent:true, opacity:0.15, roughness:0.1});
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,2.4,24,1,true), glassMat);
+  glass.position.y = 1.2;
+  scene.add(glass);
+
+  const fillMat = new THREE.MeshStandardMaterial({color:0xE4572E, roughness:0.4, metalness:0.1});
+  const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.66,0.66,1,24), fillMat);
+  fill.scale.y = 0.01;
+  fill.position.y = 0.005;
+  scene.add(fill);
+
+  return {renderer, resize, scene, camera, fill, pct:0};
+}
+
+function tickTower(vis, t){
+  const h = Math.max(0.01, (vis.pct/100) * 2.3);
+  vis.fill.scale.y = h;
+  vis.fill.position.y = h/2;
+  const color = new THREE.Color().setHSL(0.33 * (vis.pct/100), 0.6, 0.45);
+  vis.fill.material.color.copy(color);
+  vis.scene.rotation.y = Math.sin(t*0.18)*0.2;
+  vis.resize();
+  vis.renderer.render(vis.scene, vis.camera);
+}
+
+/* ============================ DATA REFRESH ============================= */
+
+async function refreshLiveVisuals(){
+  if (!supa) return;
+  const {data: rows} = await supa.from("leaderboard").select("full_name,total_score,avatar_color").order("total_score",{ascending:false}).limit(10);
+  if (visuals) updateLeaderboardData(visuals.leaderboard, rows || []);
+
+  const {data: statsRows} = await supa.rpc("get_daily_stats");
+  const stats = (statsRows && statsRows[0]) || {total_participants:0, total_attempts:0, total_correct:0, accuracy_percent:0};
+  if (visuals){
+    visuals.lamp.intensity = Math.min(1, stats.total_participants / 15);
+    visuals.tower.pct = Number(stats.accuracy_percent) || 0;
+  }
+  const accEl = document.getElementById("accNum");
+  if (accEl){
+    accEl.innerHTML = stats.total_attempts > 0
+      ? `<div class="big mono">${stats.accuracy_percent}%</div><div class="small">${stats.total_correct} correct of ${stats.total_attempts} attempts</div>`
+      : `<div class="big mono">—</div><div class="small">no attempts yet today</div>`;
+  }
+  const dsr = document.getElementById("dailyStatRow");
+  if (dsr){
+    dsr.innerHTML = `
+      <div class="stat"><div class="n mono">${stats.total_participants}</div><div class="l">Scholars active today</div></div>
+      <div class="stat"><div class="n mono">${stats.total_attempts}</div><div class="l">Answers submitted today</div></div>
+      <div class="stat"><div class="n mono">${stats.total_correct}</div><div class="l">Correct today</div></div>
+      <div class="stat"><div class="n mono">${stats.accuracy_percent}%</div><div class="l">Accuracy today</div></div>
+    `;
+  }
+
+  if (!isAdminUser && currentProfile){
+    const {data: p} = await supa.from("profiles").select("*").eq("id", currentProfile.id).maybeSingle();
+    if (p){ currentProfile = p; renderMyStats(); }
+  }
+}
+
+function subscribeRealtime(){
+  if (realtimeChannel) supa.removeChannel(realtimeChannel);
+  realtimeChannel = supa.channel("public:live")
+    .on("postgres_changes", {event:"*", schema:"public", table:"profiles"}, refreshLiveVisuals)
+    .on("postgres_changes", {event:"*", schema:"public", table:"quiz_attempts"}, refreshLiveVisuals)
+    .on("postgres_changes", {event:"*", schema:"public", table:"quiz_answers"}, refreshLiveVisuals)
+    .subscribe();
+}
+
+/* ============================== HELPERS ================================ */
+
+function escapeHtml(s){
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
+
+boot();
+</script>
+</body>
+</html>
