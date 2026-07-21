@@ -568,16 +568,20 @@ async function loadAdminQuizList(){
           <span>${q.question_count} question${q.question_count===1?"":"s"}</span> ·
           <span>${q.per_question_seconds}s · ${q.points_per_question}pts</span>
         </div>
+        <div class="rehostForm" id="rehostForm-${q.id}" style="display:none;margin-top:10px;"></div>
       </div>
       <div class="qa">
         <button class="btn small ghost" data-manage="${q.id}" data-title="${escapeAttr(q.title)}">Manage questions</button>
         <button class="btn small ghost" data-lb="${q.id}" data-title2="${escapeAttr(q.title)}">Leaderboard</button>
+        ${q.status === "ended" ? `<button class="btn small" data-rehost="${q.id}">Rehost</button>` : ``}
         <button class="btn small ember" data-delquiz="${q.id}">Delete</button>
       </div>
     `;
     el.appendChild(card);
     card.querySelector("[data-manage]").onclick = ()=>renderQuestionManager(q.id, q.title);
     card.querySelector("[data-lb]").onclick = ()=>openLeaderboardOnly(q.id, q.title);
+    const rehostBtn = card.querySelector("[data-rehost]");
+    if (rehostBtn) rehostBtn.onclick = ()=>toggleRehostForm(q.id, q.title);
     card.querySelector("[data-delquiz]").onclick = async ()=>{
       if (!confirm(`Delete "${q.title}" and all its questions/attempts?`)) return;
       await supa.from("quizzes").delete().eq("id", q.id);
@@ -585,6 +589,45 @@ async function loadAdminQuizList(){
       document.getElementById("questionManager").innerHTML = "";
     };
   });
+}
+
+function toggleRehostForm(quizId, quizTitle){
+  const wrap = document.getElementById(`rehostForm-${quizId}`);
+  if (!wrap) return;
+  const showing = wrap.style.display !== "none";
+  if (showing){ wrap.style.display = "none"; wrap.innerHTML = ""; return; }
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset() + 5);
+  wrap.style.display = "block";
+  wrap.innerHTML = `
+    <div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:4px;">
+      <label style="margin-bottom:6px;">New start time</label>
+      <input type="datetime-local" id="rehostStart-${quizId}" value="${now.toISOString().slice(0,16)}" style="margin-bottom:10px;">
+      <label style="margin-bottom:6px;">New title (optional — leave blank to reuse "${escapeAttr(quizTitle)}")</label>
+      <input type="text" id="rehostTitle-${quizId}" placeholder="${escapeAttr(quizTitle)}" style="margin-bottom:10px;">
+      <div class="status" id="rehostStatus-${quizId}"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn small" id="rehostConfirm-${quizId}">Rehost this quiz</button>
+        <button class="btn small ghost" id="rehostCancel-${quizId}">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.getElementById(`rehostCancel-${quizId}`).onclick = ()=>{ wrap.style.display = "none"; wrap.innerHTML = ""; };
+  document.getElementById(`rehostConfirm-${quizId}`).onclick = ()=>confirmRehost(quizId);
+}
+
+async function confirmRehost(quizId){
+  const startVal = document.getElementById(`rehostStart-${quizId}`).value;
+  const titleVal = document.getElementById(`rehostTitle-${quizId}`).value.trim();
+  if (!startVal){ setStatus(`rehostStatus-${quizId}`, "Pick a start time.", "err"); return; }
+  setStatus(`rehostStatus-${quizId}`, "Rehosting…");
+  const {error} = await supa.rpc("rehost_quiz", {
+    p_quiz_id: quizId,
+    p_new_start: new Date(startVal).toISOString(),
+    p_new_title: titleVal || null
+  });
+  if (error){ setStatus(`rehostStatus-${quizId}`, error.message, "err"); return; }
+  loadAdminQuizList();
 }
 
 async function renderQuestionManager(quizId, quizTitle){
